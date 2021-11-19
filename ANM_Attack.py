@@ -20,17 +20,16 @@ from MPC_Perfect import MPCAgentPerfect
 time_steps=100000
 clip_min=0.0,
 clip_max=255.0
-eps=0.5
+eps=0.05
 num_states=18-1
 num_actions=6
 num_attacks=10
-epsilon=2.0
+epsilon=0.5
 
 
 
 
 # Parallel environments
-#env = make_vec_env("CartPole-v1", n_envs=4)
 device = torch.device("cpu")
 envs = ANM6Easy()
 obs = envs.reset()
@@ -38,8 +37,9 @@ envs2 = ANM6Easy()
 obs = envs2.reset()
 
 model = A2C("MlpPolicy", envs, verbose=1)
-#model.learn(total_timesteps=time_steps)
-model = A2C.load("6bus_result/ANM_6_A2C.zip")
+model.learn(total_timesteps=time_steps)
+#Load the model if you already trained one on clean training environment
+#model = A2C.load("6bus_result/ANM_6_A2C.zip")
 
 
 agent = MPCAgentPerfect(envs.simulator, envs.action_space, envs.gamma,
@@ -49,6 +49,8 @@ agent = MPCAgentPerfect(envs.simulator, envs.action_space, envs.gamma,
 
 obs = envs.reset()
 reward_RL_vec=np.zeros((200,1),dtype=float)
+
+#Only for the purpose of statistical analysis
 '''for i in range(100):
     action, _states = model.predict(obs)
     obs, rewards, dones, info = envs.step(action)
@@ -59,8 +61,6 @@ reward_RL_vec=np.zeros((200,1),dtype=float)
 print("Total rewards", np.sum(reward_RL_vec))
 print("Mean rewards", np.sum(reward_RL_vec)/200.0)
 print("Variance", np.sqrt(np.var(reward_RL_vec)))'''
-
-
 
 '''reward_MPC_vec=np.zeros((200,1),dtype=float)
 for i in range(200):
@@ -73,6 +73,7 @@ for i in range(200):
 print("Total rewards", np.sum(reward_MPC_vec))
 print("Mean rewards", np.sum(reward_MPC_vec)/200.0)
 print("MPC Variance", np.sqrt(np.var(reward_MPC_vec)))'''
+
 
 reward_adv_vec=np.zeros((200,1),dtype=float)
 reward_adv_MPC=np.zeros((200,1),dtype=float)
@@ -161,9 +162,7 @@ for i in range(200):
     attack_vec=np.random.uniform(-0.03, 0.03,size=(np.shape(obs)))
     obs_adv+=attack_vec
     while np.linalg.norm(obs_adv-obs, 2)<=epsilon:
-        #print("Here")
         obs_adv+=0.1*attack_vec
-    #print("HEre2")
 
     #print("Final attack state", obs_adv)
     action_adv, _states = model.predict(obs_adv)
